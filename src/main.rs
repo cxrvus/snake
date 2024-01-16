@@ -11,7 +11,7 @@ mod cfg {
 	}
 
 	pub mod snake {
-		pub const SPEED: f32 = 5.;
+		pub const SPEED: f32 = 8.;
 		pub const LENGTH: u32 = 5;
 	}
 }
@@ -37,8 +37,10 @@ fn main() {
 	.init_resource::<StepTimer>()
 	.init_resource::<Direction>()
 	.add_systems(Startup, (
-		setup_res,
 		setup_camera,
+	))
+	.add_systems(OnEnter(GameState::InGame), (
+		setup_res,
 		setup_board
 	))
 	.add_systems(Update, 
@@ -48,6 +50,9 @@ fn main() {
 			step
 		)
 		.run_if(in_state(GameState::InGame)))
+	.add_systems(OnEnter(GameState::GameOver), game_over)
+	.add_systems(Update,
+		play_again.run_if(in_state(GameState::GameOver)))
 	.run();
 }
 
@@ -122,11 +127,15 @@ enum GameState {
 
 
 fn setup_res (
+	mut direction: ResMut<Direction>,
 	mut head_index: ResMut<HeadIndex>,
+	mut score: ResMut<Score>,
 	mut timer: ResMut<StepTimer>
 ) {
+	score.0 = 0;
 	head_index.0 = snake::LENGTH - 1;
 	*timer = StepTimer::new(snake::SPEED);
+	*direction = default();
 }
 
 
@@ -268,4 +277,24 @@ fn step
 			x.kind = Kind::Snake(i-1)
 		}})
 	;
+}
+
+
+fn game_over
+(
+	mut commands: Commands,
+	entities: Query<Entity, With<Tile>>,
+	mut timer: ResMut<StepTimer>
+) {
+	timer.0.pause();
+	entities.for_each(|entity| { commands.entity(entity).despawn() });
+}
+
+
+fn play_again
+(
+	kb: Res<Input<KeyCode>>,
+	mut next_state: ResMut<NextState<GameState>>
+) {
+	if kb.pressed(KeyCode::Escape) { next_state.set(GameState::InGame) }
 }
