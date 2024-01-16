@@ -1,7 +1,7 @@
 use std::{time::Duration, default};
-
 use bevy::{prelude::*, window::WindowResolution, transform::commands, render::color, math};
 use cfg::*;
+
 
 mod cfg {
 	pub mod board {
@@ -54,9 +54,7 @@ fn main() {
 
 #[derive(Component)]
 struct Tile { kind: Kind, pos: Position }
-
 enum Kind { Empty, Obstacle, Food, Snake(u32) }
-
 #[derive(PartialEq)]
 struct Position { x: u32, y: u32 }
 
@@ -78,6 +76,7 @@ impl Tile {
 #[derive(Resource, Default)]
 struct Score(u32);
 
+
 #[derive(Resource, Default)]
 struct HeadIndex(u32);
 
@@ -87,7 +86,10 @@ struct StepTimer(Timer);
 
 impl StepTimer {
 	fn new(speed: f32) -> Self {
-		Self(Timer::new(Duration::from_secs_f32(1./speed), TimerMode::Repeating))
+		Self(Timer::new(
+			std::time::Duration::from_secs_f32(1./speed),
+			TimerMode::Repeating
+		))
 	}
 }
 
@@ -127,6 +129,7 @@ fn setup_res (
 	*timer = StepTimer::new(snake::SPEED);
 }
 
+
 fn setup_camera
 (
 	mut commands: Commands
@@ -137,6 +140,7 @@ fn setup_camera
 		..default()
 	});
 }
+
 
 fn setup_board
 (
@@ -188,6 +192,7 @@ fn set_colors
 		};
 	}
 }
+
 
 fn step
 (
