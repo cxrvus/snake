@@ -1,5 +1,4 @@
-use std::{time::Duration, default};
-use bevy::{prelude::*, window::WindowResolution, transform::commands, render::color, math};
+use bevy::{prelude::*, window::WindowResolution};
 use cfg::*;
 
 
@@ -12,7 +11,7 @@ mod cfg {
 	}
 
 	pub mod snake {
-		pub const SPEED: f32 = 3.;
+		pub const SPEED: f32 = 5.;
 		pub const LENGTH: u32 = 5;
 	}
 }
@@ -44,6 +43,7 @@ fn main() {
 	))
 	.add_systems(Update, 
 		(
+			set_direction,
 			set_colors,
 			step
 		)
@@ -56,7 +56,7 @@ fn main() {
 struct Tile { kind: Kind, pos: Position }
 enum Kind { Empty, Obstacle, Food, Snake(u32) }
 #[derive(PartialEq)]
-struct Position { x: u32, y: u32 }
+struct Position { x: i32, y: i32 }
 
 impl Tile {
 	fn is_tail(&self) -> bool {
@@ -160,7 +160,7 @@ fn setup_board
 			(x, MID) if range.contains(&x) => Kind::Snake(x - tail),
 			_ => Kind::Empty
 		};
-		board.push(Tile { kind, pos: Position { x, y } });
+		board.push(Tile { kind, pos: Position { x: x as i32, y: y as i32 } });
 	}
 
 	for tile in board {
@@ -179,6 +179,29 @@ fn setup_board
 }
 
 
+fn set_direction
+(
+	mut direction: ResMut<Direction>,
+	kb: Res<Input<KeyCode>>
+)
+{
+	kb.get_pressed().next()
+		.and_then(|key_code| {
+			match key_code {
+				KeyCode::W => Some(Direction::Up),
+				KeyCode::A => Some(Direction::Left),
+				KeyCode::S => Some(Direction::Down),
+				KeyCode::D => Some(Direction::Right),
+				_ => None
+			}
+		})
+		.map(|next_direction| {
+			*direction = next_direction;
+		})
+	;
+}
+
+
 fn set_colors
 (
 	mut sprites: Query<(&mut Sprite, &Tile)>
@@ -188,7 +211,7 @@ fn set_colors
 			Kind::Empty => Color::DARK_GRAY,
 			Kind::Obstacle => Color::GRAY,
 			Kind::Food => Color::MIDNIGHT_BLUE,
-			Kind::Snake(_) => Color::WHITE
+			Kind::Snake(_) => Color::hsl(0., 0., 0.8)
 		};
 	}
 }
@@ -215,7 +238,7 @@ fn step
 
 	let Position {x, y} = head_tile.pos;
 	let (dx, dy) = direction.to_xy();
-	let next_pos = Position { x: x + dx as u32, y: y + dy as u32 };
+	let next_pos = Position { x: x + dx, y: y + dy };
 	let mut next_tile = tiles.iter_mut().find(|x| x.pos == next_pos).unwrap();
 
 	match next_tile.kind {
