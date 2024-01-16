@@ -5,8 +5,17 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-bevy = { version = "0.12.0", features = ["dynamic_linking"] }
+[dependencies.bevy]
+version = "0.12.0"
+default-features = false
+features = [
+	"multi-threaded",
+	"bevy_winit",
+	"bevy_render",
+	"bevy_sprite",
+	"bevy_text",
+	"default_font"
+]
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
