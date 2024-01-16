@@ -32,8 +32,9 @@ fn main() {
 			..default()
 		})
 	)
+	.add_state::<GameState>()
 	.init_resource::<Score>()
-	.init_resource::<Length>()
+	.init_resource::<HeadIndex>()
 	.init_resource::<StepTimer>()
 	.init_resource::<Direction>()
 	.add_systems(Startup, (
@@ -41,10 +42,12 @@ fn main() {
 		setup_camera,
 		setup_board
 	))
-	.add_systems(Update, (
-		set_colors,
-		step
-	))
+	.add_systems(Update, 
+		(
+			set_colors,
+			step
+		)
+		.run_if(in_state(GameState::InGame)))
 	.run();
 }
 
@@ -62,9 +65,12 @@ impl Tile {
 		if let Kind::Snake(i) = self.kind { i == 0 }
 		else { false }
 	}
-	fn is_head(&self, length: u32) -> bool {
-		if let Kind::Snake(i) = self.kind { i == length - 1 }
+	fn is_head(&self, index: u32) -> bool {
+		if let Kind::Snake(i) = self.kind { i == index }
 		else { false }
+	}
+	fn into_head(&mut self, index: u32) {
+		self.kind = Kind::Snake(index + 1)
 	}
 }
 
@@ -73,7 +79,7 @@ impl Tile {
 struct Score(u32);
 
 #[derive(Resource, Default)]
-struct Length(u32);
+struct HeadIndex(u32);
 
 
 #[derive(Resource, Default)]
@@ -105,11 +111,19 @@ impl Direction {
 }
 
 
+#[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
+enum GameState {
+	#[default]
+	InGame,
+	GameOver
+}
+
+
 fn setup_res (
-	mut length: ResMut<Length>,
+	mut head_index: ResMut<HeadIndex>,
 	mut timer: ResMut<StepTimer>
 ) {
-	length.0 = snake::LENGTH;
+	head_index.0 = snake::LENGTH - 1;
 	*timer = StepTimer::new(snake::SPEED);
 }
 
@@ -130,8 +144,8 @@ fn setup_board
 ) {
 	const MAX: u32 = board::SIZE - 1;
 	const MID: u32 = board::SIZE / 2;
-	let (start, end) = (MID-2, MID+2);
-	let range = start..=end;
+	let (tail, head) = (MID-2, MID+2);
+	let range = tail..=head;
 
 	let mut board: Vec<Tile> = Vec::with_capacity(board::AREA as usize);
 
@@ -139,7 +153,7 @@ fn setup_board
 		let (x, y) = (i%board::SIZE, i/board::SIZE);
 		let kind = match (x, y) {
 			(0, _) | (MAX, _) | (_, 0) | (_, MAX) => Kind::Obstacle,
-			(x, MID) if range.contains(&x) => Kind::Snake(x-start),
+			(x, MID) if range.contains(&x) => Kind::Snake(x - tail),
 			_ => Kind::Empty
 		};
 		board.push(Tile { kind, pos: Position { x, y } });
@@ -179,19 +193,18 @@ fn step
 (
 	mut tiles: Query<&mut Tile>,
 	direction: Res<Direction>,
-	mut length: ResMut<Length>,
+	mut head_index: ResMut<HeadIndex>,
 	mut score: ResMut<Score>,
 	mut timer: ResMut<StepTimer>,
-	time: Res<Time>
+	time: Res<Time>,
+	mut next_state: ResMut<NextState<GameState>>
 ) {
-	if !timer.0.just_finished() { return; }
-
 	timer.0.tick(time.delta());
 
-	info!("{}", timer.0.elapsed().as_millis());
+	if !timer.0.just_finished() { return; }
 
 	let head_tile = tiles.iter()
-		.find(|x| x.is_head(length.0))
+		.find(|x| x.is_head(head_index.0))
 		.expect("snake head not found")
 	;
 
@@ -202,16 +215,18 @@ fn step
 
 	match next_tile.kind {
 		Kind::Obstacle | Kind::Snake(_) => { 
-			timer.0.pause();
+			next_state.set(GameState::GameOver);
 			return;
 		}
 		Kind::Food => {
-			next_tile.kind = Kind::Snake(length.0);
-			length.0 += 1;
+			next_tile.into_head(head_index.0);
+			head_index.0 += 1;
 			score.0 += 1;
 			return;
 		}
-		Kind::Empty => { }
+		Kind::Empty => {
+			next_tile.into_head(head_index.0);
+		}
 	}
 
 	tiles.iter_mut()
