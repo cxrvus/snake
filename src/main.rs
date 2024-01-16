@@ -57,6 +57,17 @@ enum Kind { Empty, Obstacle, Food, Snake(u32) }
 #[derive(PartialEq)]
 struct Position { x: u32, y: u32 }
 
+impl Tile {
+	fn is_tail(&self) -> bool {
+		if let Kind::Snake(i) = self.kind { i == 0 }
+		else { false }
+	}
+	fn is_head(&self, length: u32) -> bool {
+		if let Kind::Snake(i) = self.kind { i == length - 1 }
+		else { false }
+	}
+}
+
 
 #[derive(Resource, Default)]
 struct Score(u32);
@@ -180,9 +191,8 @@ fn step
 	info!("{}", timer.0.elapsed().as_millis());
 
 	let head_tile = tiles.iter()
-		.find(|x| {
-			if let Kind::Snake(i) = x.kind { i == length.0 - 1 } else { false }
-		}).expect("snake head not found")
+		.find(|x| x.is_head(length.0))
+		.expect("snake head not found")
 	;
 
 	let Position {x, y} = head_tile.pos;
@@ -204,13 +214,11 @@ fn step
 		Kind::Empty => { }
 	}
 
-	let mut tail_tile = tiles.iter_mut()
-		.find(|x| {
-			if let Kind::Snake(i) = x.kind { i == 0 } else { false }
-		}).expect("snake tail not found")
+	tiles.iter_mut()
+		.find(|x| x.is_tail())
+		.expect("snake tail not found")
+		.kind = Kind::Empty
 	;
-
-	tail_tile.kind = Kind::Empty;
 
 	tiles.iter_mut().for_each(|mut x| {
 		if let Kind::Snake(i) = x.kind {
