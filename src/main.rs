@@ -1,9 +1,9 @@
-use std::default;
 use bevy::{prelude::*, window::WindowResolution, transform::commands, render::color};
 use cfg::*;
 
 mod cfg {
 	pub const SIZE: u32 = 16;
+	pub const MID: u32 = SIZE / 2;
 	pub const AREA: u32 = SIZE * SIZE;
 	pub const TILEPX: f32 = 32.;
 }
@@ -50,7 +50,11 @@ fn setup_camera
 (
 	mut commands: Commands
 ) {
-	// commads.spawn()
+	const CAM_OFFSET: f32 = (MID as f32) * TILEPX;
+	commands.spawn(Camera2dBundle {
+		transform: Transform::from_translation(Vec3::new(CAM_OFFSET, CAM_OFFSET, 0.)),
+		..default()
+	});
 }
 
 fn setup_board
@@ -75,14 +79,29 @@ fn setup_board
 	}
 
 	for tile in board {
+		let (x, y) = ((tile.x as f32) * TILEPX, (tile.y as f32) * TILEPX);
+
 		commands.spawn(SpriteBundle {
 			sprite: Sprite {
-				color: Color::GRAY,
+				color: kind_to_color(&tile.kind),
 				custom_size: Some(Vec2::new(TILEPX, TILEPX)),
 				..default()
 			},
+			transform: Transform::from_translation(Vec3::new(x, y, 0.)),
 			..default()
 		})
 		.insert(tile);
+	}
+}
+
+
+
+
+fn kind_to_color(kind: &Kind) -> Color {
+	match kind {
+		Kind::Empty => Color::DARK_GRAY,
+		Kind::Obstacle => Color::GRAY,
+		Kind::Food => Color::MIDNIGHT_BLUE,
+		Kind::Snake(_) => Color::WHITE
 	}
 }
