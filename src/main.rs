@@ -38,16 +38,18 @@ fn main() {
 	.init_resource::<Direction>()
 	.add_systems(Startup, (
 		setup_camera,
+		setup_score_display
 	))
 	.add_systems(OnEnter(GameState::InGame), (
-		setup_res,
+		new_game,
 		setup_board
 	))
 	.add_systems(Update, 
 		(
 			set_direction,
 			set_colors,
-			step
+			step,
+			update_score
 		)
 		.run_if(in_state(GameState::InGame)))
 	.add_systems(OnEnter(GameState::GameOver), game_over)
@@ -76,6 +78,10 @@ impl Tile {
 		self.kind = Kind::Snake(index + 1)
 	}
 }
+
+
+#[derive(Component)]
+struct ScoreDisplay;
 
 
 #[derive(Resource, Default)]
@@ -126,7 +132,7 @@ enum GameState {
 }
 
 
-fn setup_res (
+fn new_game (
 	mut direction: ResMut<Direction>,
 	mut head_index: ResMut<HeadIndex>,
 	mut score: ResMut<Score>,
@@ -145,9 +151,25 @@ fn setup_camera
 ) {
 	const CAM_OFFSET: f32 = (board::MID as f32) * board::TILEPX;
 	commands.spawn(Camera2dBundle {
-		transform: Transform::from_translation(Vec3::new(CAM_OFFSET, CAM_OFFSET, 0.)),
+		transform: Transform::from_translation(Vec3::new(CAM_OFFSET, CAM_OFFSET, 10.)),
 		..default()
 	});
+}
+
+
+fn setup_score_display
+(
+	mut commands: Commands
+) {
+	const POSX: f32 = board::MID as f32 * board::TILEPX;
+	const POSY: f32 = POSX * 2. + 10.;
+
+	commands.spawn(Text2dBundle {
+		text: Text::from_section("", TextStyle { font_size: 40., ..default() }),
+		transform: Transform::from_translation(Vec3::new(POSX, POSY, 1.)),
+		..default()
+	})
+	.insert(ScoreDisplay);
 }
 
 
@@ -222,6 +244,21 @@ fn set_colors
 			Kind::Food => Color::MIDNIGHT_BLUE,
 			Kind::Snake(_) => Color::hsl(0., 0., 0.8)
 		};
+	}
+}
+
+
+fn update_score
+(
+	score: Res<Score>,
+	mut display: Query<&mut Text, With<ScoreDisplay>>
+) {
+	let display = display.get_single_mut();
+
+	if let Ok(mut display) = display{
+		if let Some(section) = display.sections.get_mut(0){
+			section.value = format!("SCORE: {}", score.0)
+		}
 	}
 }
 
