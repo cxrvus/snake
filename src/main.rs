@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::WindowResolution};
 use cfg::*;
+use rand::{self, Rng, seq::SliceRandom};
 
 
 mod cfg {
@@ -49,7 +50,8 @@ fn main() {
 			set_direction,
 			set_colors,
 			step,
-			update_score
+			update_score,
+			spawn_food
 		)
 		.run_if(in_state(GameState::InGame)))
 	.add_systems(OnEnter(GameState::GameOver), game_over)
@@ -241,7 +243,7 @@ fn set_colors
 		sprite.color = match tile.kind {
 			Kind::Empty => Color::DARK_GRAY,
 			Kind::Obstacle => Color::GRAY,
-			Kind::Food => Color::MIDNIGHT_BLUE,
+			Kind::Food => Color::WHITE,
 			Kind::Snake(_) => Color::hsl(0., 0., 0.8)
 		};
 	}
@@ -259,6 +261,27 @@ fn update_score
 		if let Some(section) = display.sections.get_mut(0){
 			section.value = format!("SCORE: {}", score.0)
 		}
+	}
+}
+
+
+fn spawn_food
+(
+	mut tiles: Query<&mut Tile>
+) {
+	let no_food = !tiles.iter().any(|x| matches!(x.kind, Kind::Food));
+	if no_food {
+		let mut rng = rand::thread_rng();
+		let empty_indecies: Vec<usize> = tiles.iter()
+			.filter(|x| matches!(x.kind, Kind::Empty))
+			.enumerate()
+			.map(|(i,_)| i)
+			.collect()
+		;
+
+		let index = empty_indecies.choose(&mut rng).unwrap();
+		let mut target = tiles.iter_mut().enumerate().find(|(i,_)| i == index).map(|(_,x)| x).unwrap();
+		target.kind = Kind::Food;
 	}
 }
 
