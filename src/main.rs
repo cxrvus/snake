@@ -271,13 +271,13 @@ fn spawn_food
 ) {
 	let no_food = !tiles.iter().any(|x| matches!(x.kind, Kind::Food));
 	if no_food {
-		let mut rng = rand::thread_rng();
 		let empty_poses: Vec<Position> = tiles.iter()
 			.filter(|x| matches!(x.kind, Kind::Empty))
 			.map(|x| x.pos)
 			.collect()
 		;
 
+		let mut rng = rand::thread_rng();
 		let pos = empty_poses.choose(&mut rng).unwrap();
 		let mut target = tiles.iter_mut().find(|x| x.pos == *pos).unwrap();
 		target.kind = Kind::Food;
