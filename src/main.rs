@@ -12,7 +12,7 @@ mod cfg {
 	}
 
 	pub mod snake {
-		pub const SPEED: f32 = 8.;
+		pub const SPEED: f32 = 10.;
 		pub const LENGTH: u32 = 5;
 	}
 }
@@ -242,9 +242,9 @@ fn set_colors
 	for (mut sprite, tile) in &mut sprites {
 		sprite.color = match tile.kind {
 			Kind::Empty => Color::DARK_GRAY,
-			Kind::Obstacle => Color::GRAY,
+			Kind::Obstacle => Color::hsl(0., 0., 0.4),
 			Kind::Food => Color::WHITE,
-			Kind::Snake(_) => Color::hsl(0., 0., 0.8)
+			Kind::Snake(_) => Color::hsl(0., 0., 0.7)
 		};
 	}
 }
