@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::WindowResolution};
 use cfg::*;
-use rand::{self, Rng, seq::SliceRandom};
+use rand::seq::SliceRandom;
 
 
 mod cfg {
@@ -64,7 +64,7 @@ fn main() {
 #[derive(Component)]
 struct Tile { kind: Kind, pos: Position }
 enum Kind { Empty, Obstacle, Food, Snake(u32) }
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 struct Position { x: i32, y: i32 }
 
 impl Tile {
@@ -272,15 +272,14 @@ fn spawn_food
 	let no_food = !tiles.iter().any(|x| matches!(x.kind, Kind::Food));
 	if no_food {
 		let mut rng = rand::thread_rng();
-		let empty_indecies: Vec<usize> = tiles.iter()
+		let empty_poses: Vec<Position> = tiles.iter()
 			.filter(|x| matches!(x.kind, Kind::Empty))
-			.enumerate()
-			.map(|(i,_)| i)
+			.map(|x| x.pos)
 			.collect()
 		;
 
-		let index = empty_indecies.choose(&mut rng).unwrap();
-		let mut target = tiles.iter_mut().enumerate().find(|(i,_)| i == index).map(|(_,x)| x).unwrap();
+		let pos = empty_poses.choose(&mut rng).unwrap();
+		let mut target = tiles.iter_mut().find(|x| x.pos == *pos).unwrap();
 		target.kind = Kind::Food;
 	}
 }
