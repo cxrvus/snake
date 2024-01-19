@@ -47,7 +47,6 @@ fn main() {
 	))
 	.add_systems(Update, 
 		(
-			set_direction,
 			set_colors,
 			step,
 			update_score,
@@ -107,7 +106,7 @@ impl StepTimer {
 }
 
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone, Copy)]
 enum Direction {
 	#[default]
 	Right,
@@ -122,6 +121,22 @@ impl Direction {
 			Direction::Up => (0, 1),
 			Direction::Down => (0, -1),
 		}
+	}
+
+	fn change_by_key(&mut self, key_code: KeyCode) {
+		match (key_code, *self) {
+			(KeyCode::W, Direction::Down) => None,
+			(KeyCode::W, _) => Some(Direction::Up),
+			(KeyCode::A, Direction::Right) => None,
+			(KeyCode::A, _) => Some(Direction::Left),
+			(KeyCode::S, Direction::Up) => None,
+			(KeyCode::S, _) => Some(Direction::Down),
+			(KeyCode::D, Direction::Right) => None,
+			(KeyCode::D, _) => Some(Direction::Right),
+			_ => None
+		}.map(|next_direction| {
+			*self = next_direction;
+		});
 	}
 }
 
@@ -212,29 +227,6 @@ fn setup_board
 }
 
 
-fn set_direction
-(
-	mut direction: ResMut<Direction>,
-	kb: Res<Input<KeyCode>>
-)
-{
-	kb.get_pressed().next()
-		.and_then(|key_code| {
-			match key_code {
-				KeyCode::W => Some(Direction::Up),
-				KeyCode::A => Some(Direction::Left),
-				KeyCode::S => Some(Direction::Down),
-				KeyCode::D => Some(Direction::Right),
-				_ => None
-			}
-		})
-		.map(|next_direction| {
-			*direction = next_direction;
-		})
-	;
-}
-
-
 fn set_colors
 (
 	mut sprites: Query<(&mut Sprite, &Tile)>
@@ -288,16 +280,21 @@ fn spawn_food
 fn step
 (
 	mut tiles: Query<&mut Tile>,
-	direction: Res<Direction>,
+	kb: Res<Input<KeyCode>>,
+	time: Res<Time>,
+	mut direction: ResMut<Direction>,
 	mut head_index: ResMut<HeadIndex>,
 	mut score: ResMut<Score>,
 	mut timer: ResMut<StepTimer>,
-	time: Res<Time>,
 	mut next_state: ResMut<NextState<GameState>>
 ) {
 	timer.0.tick(time.delta());
 
 	if !timer.0.just_finished() { return; }
+
+	if let Some(key_code) = kb.get_pressed().next() {
+		direction.change_by_key(*key_code);
+	}
 
 	let head_tile = tiles.iter()
 		.find(|x| x.is_head(head_index.0))
