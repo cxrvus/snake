@@ -47,7 +47,7 @@ fn main() {
 	))
 	.add_systems(Update, 
 		(
-			set_colors,
+			update_colors,
 			step,
 			update_score,
 			spawn_food
@@ -71,12 +71,23 @@ impl Tile {
 		if let Kind::Snake(i) = self.kind { i == 0 }
 		else { false }
 	}
+
 	fn is_head(&self, index: u32) -> bool {
 		if let Kind::Snake(i) = self.kind { i == index }
 		else { false }
 	}
+
 	fn into_head(&mut self, index: u32) {
 		self.kind = Kind::Snake(index + 1)
+	}
+
+	fn get_color(&self) -> Color {
+		match self.kind {
+			Kind::Empty => Color::DARK_GRAY,
+			Kind::Obstacle => Color::hsl(0., 0., 0.4),
+			Kind::Food => Color::WHITE,
+			Kind::Snake(_) => Color::hsl(0., 0., 0.7)
+		}
 	}
 }
 
@@ -227,18 +238,8 @@ fn setup_board
 }
 
 
-fn set_colors
-(
-	mut sprites: Query<(&mut Sprite, &Tile)>
-) {
-	for (mut sprite, tile) in &mut sprites {
-		sprite.color = match tile.kind {
-			Kind::Empty => Color::DARK_GRAY,
-			Kind::Obstacle => Color::hsl(0., 0., 0.4),
-			Kind::Food => Color::WHITE,
-			Kind::Snake(_) => Color::hsl(0., 0., 0.7)
-		};
-	}
+fn update_colors (mut sprites: Query<(&mut Sprite, &Tile)>) {
+	sprites.iter_mut().for_each(|(mut sprite, tile)| sprite.color = tile.get_color())
 }
 
 
