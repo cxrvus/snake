@@ -251,7 +251,7 @@ fn update_score
 
 	if let Ok(mut display) = display{
 		if let Some(section) = display.sections.get_mut(0){
-			section.value = format!("SCORE: {}", score.0)
+			section.value = format!("{}", score.0)
 		}
 	}
 }
