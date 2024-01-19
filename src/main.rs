@@ -39,7 +39,8 @@ fn main() {
 	.init_resource::<Direction>()
 	.add_systems(Startup, (
 		setup_camera,
-		setup_score_display
+		setup_score_display,
+		setup_game_over_display
 	))
 	.add_systems(OnEnter(GameState::InGame), (
 		new_game,
@@ -90,6 +91,10 @@ impl Tile {
 		}
 	}
 }
+
+
+#[derive(Component)]
+struct GameOverDisplay;
 
 
 #[derive(Component)]
@@ -161,6 +166,7 @@ enum GameState {
 
 
 fn new_game (
+	mut game_over_vis: Query<&mut Visibility, With<GameOverDisplay>>,
 	mut direction: ResMut<Direction>,
 	mut head_index: ResMut<HeadIndex>,
 	mut score: ResMut<Score>,
@@ -170,6 +176,7 @@ fn new_game (
 	head_index.0 = snake::LENGTH - 1;
 	*timer = StepTimer::new(snake::SPEED);
 	*direction = default();
+	*game_over_vis.single_mut() = Visibility::Hidden;
 }
 
 
@@ -193,11 +200,47 @@ fn setup_score_display
 	const POSY: f32 = POSX * 2. + 10.;
 
 	commands.spawn(Text2dBundle {
-		text: Text::from_section("", TextStyle { font_size: 40., ..default() }),
+		text: Text::from_section("", TextStyle { font_size: 50., ..default() }),
 		transform: Transform::from_translation(Vec3::new(POSX, POSY, 1.)),
 		..default()
 	})
 	.insert(ScoreDisplay);
+}
+
+
+fn setup_game_over_display
+(
+	mut commands: Commands
+) {
+	const POSX: f32 = board::MID as f32 * board::TILEPX;
+	const POSY: f32 = POSX;
+
+	commands.spawn(Text2dBundle {
+		visibility: Visibility::Hidden,
+		transform: Transform::from_translation(Vec3::new(POSX, POSY, 1.)),
+		text: Text { 
+			alignment: TextAlignment::Center,
+			sections: vec![
+				TextSection {
+					value: "Game Over\n".into(),
+					style: TextStyle {
+						font_size: 40.,
+						..default()
+					}
+				},
+				TextSection {
+					value: "(Press ESC to play again)".into(),
+					style: TextStyle {
+						font_size: 25.,
+						..default()
+					}
+				},
+			],
+			..default()
+		},
+		..default()
+	})
+	.insert(GameOverDisplay);
 }
 
 
@@ -341,10 +384,12 @@ fn game_over
 (
 	mut commands: Commands,
 	entities: Query<Entity, With<Tile>>,
+	mut game_over_vis: Query<&mut Visibility, With<GameOverDisplay>>,
 	mut timer: ResMut<StepTimer>
 ) {
 	timer.0.pause();
 	entities.for_each(|entity| { commands.entity(entity).despawn() });
+	*game_over_vis.single_mut() = Visibility::Visible;
 }
 
 
