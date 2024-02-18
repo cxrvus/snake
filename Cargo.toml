@@ -21,6 +21,11 @@ features = [
 	"default_font"
 ]
 
+[dependencies.winit]
+# version = "*"
+version = "=0.28.7"
+features = ["default"]
+
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
